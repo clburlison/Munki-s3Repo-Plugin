@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This is an [Amazon s3](https://aws.amazon.com/s3/) [Repo Plugin](https://github.com/munki/munki/wiki/Repo-Plugins) for [Munki 3](https://github.com/munki/munki/wiki/Munki-3-Information). This plugin makes usages of the fantastic [boto3](https://github.com/boto/boto3) python library.
+This is an [Amazon s3](https://aws.amazon.com/s3/) [Repo Plugin](https://github.com/munki/munki/wiki/Repo-Plugins) for [Munki 3](https://github.com/munki/munki/wiki/Munki-3-Information). This plugin uses the [boto3](https://github.com/boto/boto3) python library.
 
 
 ## Getting Started
