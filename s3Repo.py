@@ -9,6 +9,8 @@ Source: https://github.com/clburlison/Munki-s3Repo-Plugin
 import tempfile
 import io
 
+from munkilib.munkirepo import Repo
+
 try:
     import boto3
     import botocore
@@ -16,17 +18,15 @@ except ImportError as err:
     print('This plugin uses the boto3 module. Please install it with:\n'
           '   pip install boto3 --user')
 
-from munkilib.munkirepo import Repo
-
 
 class BotoError(Exception):
     """Generic exception for all boto3 errors.
 
-    This should only be uses for non-recoverable errors that require an exit.
+    This should only be used for non-recoverable errors that require an exit.
     """
 
     def __init__(self, message, error):
-        """Constructor - Print error messages before exiting."""
+        """Constructor"""
         # Call the base class constructor with the parameters it needs
         super(BotoError, self).__init__(message)
         super(BotoError, self).__init__(error)
@@ -53,13 +53,11 @@ class s3Repo(Repo):
         self._connect()
 
     def _connect(self):
-        """Connect to a s3 bucket resource.
+        """Check connection to a s3 bucket resource.
 
-        This will validate the bucket connectivity, bucket existence,
-        and bucket read/write authorization.
-
-        Most of these settings come straight from ~/.aws/config and
-        ~/.aws/credentials.
+        Validates bucket connectivity and bucket existence before
+        continuing the munki process. This uses the head method
+        which is the most cost effective check.
         """
         try:
             self.s3.meta.client.head_bucket(Bucket=self.BUCKET_NAME)
@@ -70,23 +68,27 @@ class s3Repo(Repo):
         except(botocore.vendored.requests.exceptions.ConnectionError) as err:
             raise BotoError("Unable to connect to s3 bucket", err)
         except(botocore.exceptions.NoCredentialsError) as err:
-            raise BotoError(err, "Please follow the Quick Star guide: "
-                            "https://github.com/boto/boto3#quick-start")
+            raise BotoError(err, "Please follow the Setup guide: "
+                            "https://github.com/clburlison/"
+                            "Munki-s3Repo-Plugin#setup")
         except(botocore.exceptions.ParamValidationError) as err:
             raise BotoError("Repo URL is not set or is invalid. Please run "
                             "'munkiimport --configure' and set "
                             "the Repo URL to your s3 bucket name.",
                             err)
         except(Exception) as err:
-            raise BotoError('Generic errors are the worst0', err)
-
-        # TODO: check for read/write access to the bucket
+            raise BotoError("An error occurred in '_connect' while attempting "
+                            "to access the s3 bucket.", err)
 
     def itemlist(self, kind):
-        """Return a list of identifiers for each item of kind.
+        """Return a list of resource_identifiers for each item of kind.
 
         Kind will be 'catalogs', 'manifests', 'pkgsinfo', 'pkgs', or 'icons'.
         For a file-backed repo this would be a list of pathnames.
+
+        The returned file list string does not have the kind:
+         - Good - apps/GoogleChrome-xxx.plist
+         - Bad  - pkgs/apps/GoogleChrome-xxx.plist
         """
         file_list = []
         my_bucket = self.s3.Bucket(self.BUCKET_NAME)
@@ -96,15 +98,16 @@ class s3Repo(Repo):
             if obj_list[0].startswith('.') or obj_list[-1].startswith('.'):
                 continue
             if kind == obj_list[0]:
-                # remove the first folder level which would be the 'kind'
+                # remove the first item, 'kind', from list
                 del obj_list[0]
+                # rejoin the list into a relative object path
                 rel_path = '/'.join(obj_list)
                 file_list.append(rel_path)
 
         return file_list
 
     def get(self, resource_identifier):
-        """Return the content of an item with the given resource_identifier.
+        """Download and return the remote content of an remote s3 item.
 
         For a file-backed repo, a resource_identifier of
         'pkgsinfo/apps/Firefox-52.0.plist' would return the contents of
@@ -121,10 +124,11 @@ class s3Repo(Repo):
             print("The file '{}' does not exist. {}".format(
                   resource_identifier, err))
         except(Exception) as err:
-            raise BotoError('Generic errors are the worst1', err)
+            raise BotoError("An error occurred in 'get' while attempting "
+                            "to download a file.", err)
 
     def get_to_local_file(self, resource_identifier, local_file_path):
-        """Get content of remote item and save to a local file.
+        """Download content of a remote s3 item and save to a local file.
 
         For a file-backed repo, a resource_identifier
         of 'pkgsinfo/apps/Firefox-52.0.plist' would copy the contents of
@@ -135,10 +139,11 @@ class s3Repo(Repo):
             self.client.download_file(self.BUCKET_NAME, resource_identifier,
                                       local_file_path)
         except(Exception) as err:
-            raise BotoError('Generic errors are the worst2', err)
+            raise BotoError("An error occurred in 'get_to_local_file' while "
+                            "attempting to download a file.", err)
 
     def put(self, resource_identifier, content):
-        """Store content in the s3 bucket based on resource_identifier path.
+        """Upload python data to the remote s3 bucket.
 
         For a file-backed repo, a resource_identifier of
         'pkgsinfo/apps/Firefox-52.0.plist' would result in the content being
@@ -150,10 +155,11 @@ class s3Repo(Repo):
             self.client.upload_fileobj(data, self.BUCKET_NAME,
                                        resource_identifier)
         except(Exception) as err:
-            raise BotoError('Generic errors are the worst3', err)
+            raise BotoError("An error occurred in 'put' while attempting "
+                            "to upload a file.", err)
 
     def put_from_local_file(self, resource_identifier, local_file_path):
-        """Copy the content of local file to the remote s3 bucket.
+        """Upload the content of local file to the remote s3 bucket.
 
         For a file-backed repo, a resource_identifier
         of 'pkgsinfo/apps/Firefox-52.0.plist' would result in the content
@@ -163,7 +169,8 @@ class s3Repo(Repo):
             self.client.upload_file(local_file_path, self.BUCKET_NAME,
                                     resource_identifier)
         except(Exception) as err:
-            raise BotoError('Generic errors are the worst4', err)
+            raise BotoError("An error occurred in 'put_from_local_file' while "
+                            "attempting to download a file.", err)
 
     def delete(self, resource_identifier):
         """Delete a repo object located by resource_identifier.
@@ -175,4 +182,5 @@ class s3Repo(Repo):
         try:
             self.client.delete_object(self.BUCKET_NAME, resource_identifier)
         except(Exception) as err:
-            raise BotoError('Generic errors are the worst5', err)
+            raise BotoError("An error occurred in 'delete' while attempting "
+                            "to upload a file.", err)
