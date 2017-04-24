@@ -1,18 +1,19 @@
-# Munki-s3Repo-Plugin
-
 ## Introduction
 
-This is an [Amazon s3](https://aws.amazon.com/s3/) [Repo Plugin](https://github.com/munki/munki/wiki/Repo-Plugins) for [Munki 3](https://github.com/munki/munki/wiki/Munki-3-Information). This plugin uses the [boto3](https://github.com/boto/boto3) python library.
+`s3Repo.py` is a [Repo Plugin](https://github.com/munki/munki/wiki/Repo-Plugins) for [Munki 3](https://github.com/munki/munki/wiki/Munki-3-Information). This plugin allows administrators to securely interact with their munki repo hosted in a [S3](https://aws.amazon.com/s3/) compatible bucket.
+
+`s3Repo.py` uses the [boto3](https://github.com/boto/boto3) python library.
 
 
 ## Getting Started
 
 What you need:
 * An AWS account
-* A s3 bucket
+* A S3 bucket
 * AWS credentials that has read/write access to the bucket
 
 ### Setup
+
 1. Install the boto3 python library:
     ```bash
     $ pip install boto3 --user
@@ -21,7 +22,7 @@ What you need:
     ```bash
     $ sudo curl https://raw.githubusercontent.com/clburlison/Munki-s3Repo-Plugin/master/s3Repo.py -o /usr/local/munki/munkilib/munkirepo/s3Repo.py
     ```
-1. Configure munkiimport, setting the Repo URL to your s3 bucket name:
+1. Configure munkiimport, setting the Repo URL to your S3 bucket name:
     ```bash
     $ munkiimport --configure
 
@@ -57,3 +58,6 @@ What you need:
         :wq
         ```
 
+## Implementation Notes
+* `makecatalogs` works with the s3Repo plugin but is very slow due to all the web calls needed to get every icon and pkginfo item.
+* `iconimporter` has to download dmgs and pkgs from the repo in order to process them for possible icons. This is slower and uses more disk than the direct file access possible when only file-based repos were supported. Running `iconimporter` against an entire repo should be an infrequent operation, so it's not likely this is worth optimizing in any way.

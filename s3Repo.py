@@ -26,7 +26,7 @@ class BotoError(Exception):
     """
 
     def __init__(self, message, error):
-        """Constructor"""
+        """Constructor."""
         # Call the base class constructor with the parameters it needs
         super(BotoError, self).__init__(message)
         super(BotoError, self).__init__(error)
@@ -41,7 +41,7 @@ class s3Repo(Repo):
         """Constructor."""
         self.baseurl = baseurl
         self.BUCKET_NAME = baseurl
-        # TODO: If using minio or another s3 compatible solution the
+        # TODO: If using minio or another S3 compatible solution the
         # endpoint_url needs to be set. Currently this needs some kind of
         # configuration ability. Using the baseurl wasn't valid.
         # if baseurl:
@@ -53,7 +53,7 @@ class s3Repo(Repo):
         self._connect()
 
     def _connect(self):
-        """Check connection to a s3 bucket resource.
+        """Check connection to a S3 bucket resource.
 
         Validates bucket connectivity and bucket existence before
         continuing the munki process. This uses the head method
@@ -63,10 +63,10 @@ class s3Repo(Repo):
             self.s3.meta.client.head_bucket(Bucket=self.BUCKET_NAME)
         except(botocore.exceptions.ClientError) as err:
             raise BotoError(
-                "s3 bucket '{}' has not been "
+                "S3 bucket '{}' has not been "
                 "created".format(self.BUCKET_NAME), err)
         except(botocore.vendored.requests.exceptions.ConnectionError) as err:
-            raise BotoError("Unable to connect to s3 bucket", err)
+            raise BotoError("Unable to connect to S3 bucket", err)
         except(botocore.exceptions.NoCredentialsError) as err:
             raise BotoError(err, "Please follow the Setup guide: "
                             "https://github.com/clburlison/"
@@ -74,11 +74,11 @@ class s3Repo(Repo):
         except(botocore.exceptions.ParamValidationError) as err:
             raise BotoError("Repo URL is not set or is invalid. Please run "
                             "'munkiimport --configure' and set "
-                            "the Repo URL to your s3 bucket name.",
+                            "the Repo URL to your S3 bucket name.",
                             err)
         except(Exception) as err:
             raise BotoError("An error occurred in '_connect' while attempting "
-                            "to access the s3 bucket.", err)
+                            "to access the S3 bucket.", err)
 
     def itemlist(self, kind):
         """Return a list of resource_identifiers for each item of kind.
@@ -107,7 +107,7 @@ class s3Repo(Repo):
         return file_list
 
     def get(self, resource_identifier):
-        """Download and return the remote content of an remote s3 item.
+        """Download and return the remote content of an remote S3 item.
 
         For a file-backed repo, a resource_identifier of
         'pkgsinfo/apps/Firefox-52.0.plist' would return the contents of
@@ -128,7 +128,7 @@ class s3Repo(Repo):
                             "to download a file.", err)
 
     def get_to_local_file(self, resource_identifier, local_file_path):
-        """Download content of a remote s3 item and save to a local file.
+        """Download content of a remote S3 item and save to a local file.
 
         For a file-backed repo, a resource_identifier
         of 'pkgsinfo/apps/Firefox-52.0.plist' would copy the contents of
@@ -143,7 +143,7 @@ class s3Repo(Repo):
                             "attempting to download a file.", err)
 
     def put(self, resource_identifier, content):
-        """Upload python data to the remote s3 bucket.
+        """Upload python data to the remote S3 bucket.
 
         For a file-backed repo, a resource_identifier of
         'pkgsinfo/apps/Firefox-52.0.plist' would result in the content being
@@ -159,7 +159,7 @@ class s3Repo(Repo):
                             "to upload a file.", err)
 
     def put_from_local_file(self, resource_identifier, local_file_path):
-        """Upload the content of local file to the remote s3 bucket.
+        """Upload the content of local file to the remote S3 bucket.
 
         For a file-backed repo, a resource_identifier
         of 'pkgsinfo/apps/Firefox-52.0.plist' would result in the content
