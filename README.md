@@ -24,9 +24,9 @@ The s3Repo plugin can create the necessary subdirectories (catalogs, icons, mani
     $ sudo cp s3Repo.py /usr/local/munki/munkilib/munkirepo/
     ```
 1. Make changes to the 'prefs' dictionary inside the `prefSetter.py` file.
-  * Required values: `aws_access_key_id`, `aws_secret_access_key`, `bucket`, & `region`.
-  * All values inside the 'ExtraArgs' dictionary are optional and can be omitted. For additional details on ExtraArgs please see [ALLOWED_UPLOAD_ARGS](http://boto3.readthedocs.io/en/latest/reference/customizations/s3.html#boto3.s3.transfer.S3Transfer.ALLOWED_UPLOAD_ARGS).
-  * If using [Minio](https://www.minio.io/) or another S3 service you **must** set the `endpoint_url` to the desired url inside of your 'prefs'.
+    * Required values: `aws_access_key_id`, `aws_secret_access_key`, `bucket`, & `region`.
+    * All values inside the 'ExtraArgs' dictionary are optional and can be omitted. For additional details on ExtraArgs please see [ALLOWED_UPLOAD_ARGS](http://boto3.readthedocs.io/en/latest/reference/customizations/s3.html#boto3.s3.transfer.S3Transfer.ALLOWED_UPLOAD_ARGS).
+    * If using [Minio](https://www.minio.io/) or another S3 service you **must** set the `endpoint_url` to the desired url inside of your 'prefs'.
 1. Run the `prefSetter.py` script to apply settings:
     ```bash
     $ ./prefSetter.py
