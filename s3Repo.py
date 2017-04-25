@@ -6,17 +6,54 @@ Source: https://github.com/clburlison/Munki-s3Repo-Plugin
 """
 # encoding: utf-8
 
+from Foundation import CFPreferencesCopyAppValue
+from PyObjCTools import Conversion
+from munkilib.munkirepo import Repo
 import tempfile
 import io
-
-from munkilib.munkirepo import Repo
+import os
+import sys
 
 try:
     import boto3
     import botocore
-except ImportError as err:
+except(ImportError):
     print('This plugin uses the boto3 module. Please install it with:\n'
           '   pip install boto3 --user')
+
+__version__ = '0.2.0'
+BUNDLE = 'com.clburlison.munki.s3Repo'
+
+
+def get_preferences():
+    """Return a dictonary of the preferences from the current profile key.
+
+    If no profile is set the plugin will use the 'default' profile key.
+
+    Multiple profiles to be set in the 'com.clburlison.munki.s3Repo'
+    preference domain. Swithing between the profiles can be done by changing
+    the AWS_PROFILE environment variable.
+    """
+    profile = os.environ.get('S3REPO_PROFILE') or 'default'
+    if profile is not 'default':
+        print("DEBUG: Currently using the '{}' profile".format(profile))
+    pref = CFPreferencesCopyAppValue(profile, BUNDLE)
+    if pref is None:
+        sys.stderr.write("ERROR: s3Repo plugin is not properly configured. \n"
+                         "Please follow the setup guide: "
+                         "https://github.com/clburlison/"
+                         "Munki-s3Repo-Plugin#setup \n")
+        exit(1)
+    # Remove the AWS_PROFILE env variable. The s3Repo Plugin is overriding
+    # all of these variables in the bot3.session and this can causes
+    # issues if the profile is not properly set.
+    try:
+        del os.environ['AWS_PROFILE']
+    except(KeyError):
+        pass
+
+    # Return a python dictonary of our preferences
+    return Conversion.pythonCollectionFromPropertyList(pref)
 
 
 class BotoError(Exception):
@@ -39,17 +76,21 @@ class s3Repo(Repo):
 
     def __init__(self, baseurl):
         """Constructor."""
-        self.baseurl = baseurl
-        self.BUCKET_NAME = baseurl
-        # TODO: If using minio or another S3 compatible solution the
-        # endpoint_url needs to be set. Currently this needs some kind of
-        # configuration ability. Using the baseurl wasn't valid.
-        # if baseurl:
-        #     self.s3 = boto3.resource('s3', endpoint_url=baseurl)
-        #     self.client = boto3.client('s3', endpoint_url=baseurl)
-        # else:
-        self.s3 = boto3.resource('s3')
-        self.client = boto3.client('s3')
+        prefs = get_preferences()
+        endpoint_url = prefs.get('endpoint_url')
+        self.BUCKET_NAME = prefs.get('bucket')
+        self.EXTRA_ARGS = prefs.get('ExtraArgs')
+        session = boto3.session.Session(
+                aws_access_key_id=prefs.get('aws_access_key_id'),
+                aws_secret_access_key=prefs.get('aws_secret_access_key'),
+                region_name=prefs.get('region'),
+                )
+        # If using minio or another S3 compatible solution the endpoint_url
+        # key needs to be set however we can pass None if the pref isn't set.
+        self.s3 = session.resource(
+            service_name='s3', endpoint_url=endpoint_url)
+        self.client = session.client(
+            service_name='s3', endpoint_url=endpoint_url)
         self._connect()
 
     def _connect(self):
@@ -157,6 +198,7 @@ class s3Repo(Repo):
             self.client.upload_fileobj(Fileobj=data,
                                        Bucket=self.BUCKET_NAME,
                                        Key=resource_identifier,
+                                       ExtraArgs=self.EXTRA_ARGS)
         except(Exception) as err:
             raise BotoError("An error occurred in 'put' while attempting "
                             "to upload a file.", err)
@@ -172,6 +214,7 @@ class s3Repo(Repo):
             self.client.upload_file(Filename=local_file_path,
                                     Bucket=self.BUCKET_NAME,
                                     Key=resource_identifier,
+                                    ExtraArgs=self.EXTRA_ARGS)
         except(Exception) as err:
             raise BotoError("An error occurred in 'put_from_local_file' while "
                             "attempting to upload a file.", err)
