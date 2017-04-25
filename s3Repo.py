@@ -68,7 +68,7 @@ class s3Repo(Repo):
         except(botocore.vendored.requests.exceptions.ConnectionError) as err:
             raise BotoError("Unable to connect to S3 bucket", err)
         except(botocore.exceptions.NoCredentialsError) as err:
-            raise BotoError(err, "Please follow the Setup guide: "
+            raise BotoError(err, "Please follow the setup guide: "
                             "https://github.com/clburlison/"
                             "Munki-s3Repo-Plugin#setup")
         except(botocore.exceptions.ParamValidationError) as err:
@@ -117,11 +117,12 @@ class s3Repo(Repo):
         """
         fileobj, directivepath = tempfile.mkstemp()
         try:
-            self.client.download_file(self.BUCKET_NAME, resource_identifier,
-                                      directivepath)
+            self.client.download_file(Bucket=self.BUCKET_NAME,
+                                      Key=resource_identifier,
+                                      Filename=directivepath)
             return open(directivepath).read()
         except(botocore.exceptions.ClientError) as err:
-            print("The file '{}' does not exist. {}".format(
+            print("DEBUG: The file '{}' does not exist. {}".format(
                   resource_identifier, err))
         except(Exception) as err:
             raise BotoError("An error occurred in 'get' while attempting "
@@ -136,8 +137,9 @@ class s3Repo(Repo):
         local_file_path.
         """
         try:
-            self.client.download_file(self.BUCKET_NAME, resource_identifier,
-                                      local_file_path)
+            self.client.download_file(Bucket=self.BUCKET_NAME,
+                                      Key=resource_identifier,
+                                      Filename=local_file_path)
         except(Exception) as err:
             raise BotoError("An error occurred in 'get_to_local_file' while "
                             "attempting to download a file.", err)
@@ -152,8 +154,9 @@ class s3Repo(Repo):
         # boto3.client.upload_fileobj() needs data to be a binary object
         data = io.BytesIO(content)
         try:
-            self.client.upload_fileobj(data, self.BUCKET_NAME,
-                                       resource_identifier)
+            self.client.upload_fileobj(Fileobj=data,
+                                       Bucket=self.BUCKET_NAME,
+                                       Key=resource_identifier,
         except(Exception) as err:
             raise BotoError("An error occurred in 'put' while attempting "
                             "to upload a file.", err)
@@ -166,11 +169,12 @@ class s3Repo(Repo):
         being saved to <repo_root>/pkgsinfo/apps/Firefox-52.0.plist.
         """
         try:
-            self.client.upload_file(local_file_path, self.BUCKET_NAME,
-                                    resource_identifier)
+            self.client.upload_file(Filename=local_file_path,
+                                    Bucket=self.BUCKET_NAME,
+                                    Key=resource_identifier,
         except(Exception) as err:
             raise BotoError("An error occurred in 'put_from_local_file' while "
-                            "attempting to download a file.", err)
+                            "attempting to upload a file.", err)
 
     def delete(self, resource_identifier):
         """Delete a repo object located by resource_identifier.
@@ -180,7 +184,8 @@ class s3Repo(Repo):
         <repo_root>/pkgsinfo/apps/Firefox-52.0.plist.
         """
         try:
-            self.client.delete_object(self.BUCKET_NAME, resource_identifier)
+            self.client.delete_object(Bucket=self.BUCKET_NAME,
+                                      Key=resource_identifier)
         except(Exception) as err:
             raise BotoError("An error occurred in 'delete' while attempting "
                             "to upload a file.", err)
