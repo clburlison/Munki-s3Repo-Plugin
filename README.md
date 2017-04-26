@@ -1,13 +1,13 @@
 ## Introduction
 
-s3Repo is a [Repo Plugin](https://github.com/munki/munki/wiki/Repo-Plugins) for [Munki 3](https://github.com/munki/munki/wiki/Munki-3-Information). This plugin allows administrators to securely interact with their munki repo hosted in a S3 compatible bucket.
+s3Repo is a [Repo Plugin](https://github.com/munki/munki/wiki/Repo-Plugins) for [Munki 3](https://github.com/munki/munki/wiki/Munki-3-Information). This plugin allows administrators to interact with their munki repo hosted in a S3 compatible bucket.
 
 s3Repo uses the [boto3](https://github.com/boto/boto3) python library.
 
 
 ## Getting Started
 
-Before you can configure and use the s3Repo plugin you must have an S3 compatible backend, a bucket on the backend, and an account that has read/write permissions to the bucket. It is recommended, though not required, to have a separate bucket for your munki repo. [Amazon S3](https://aws.amazon.com/s3/) is the most popular S3 solution however others exist such as [Minio](https://www.minio.io/); which allows you to stand up your own S3 backend.
+Before you can configure and use the s3Repo plugin you must have an S3 compatible backend, a bucket on the backend, and an account that has read/write permissions to the bucket. It is recommended, though not required, to have a separate bucket for your munki repo. [Amazon S3](https://aws.amazon.com/s3/) is the most popular S3 solution however others exist such as [Minio](https://www.minio.io/), which allows you to stand up your own S3 backend.
 
 The s3Repo plugin can create the necessary subdirectories (catalogs, icons, manifests, pkgs, pkginfo) however by design will **not** attempt to create buckets.
 
@@ -26,19 +26,19 @@ The s3Repo plugin can create the necessary subdirectories (catalogs, icons, mani
 1. Make changes to the 'prefs' dictionary inside the `prefSetter.py` file:
     * Required values: `aws_access_key_id`, `aws_secret_access_key`, `bucket`, & `region`.
     * All values inside the 'ExtraArgs' dictionary are optional and can be omitted. For additional details on ExtraArgs please see [ALLOWED_UPLOAD_ARGS](http://boto3.readthedocs.io/en/latest/reference/customizations/s3.html#boto3.s3.transfer.S3Transfer.ALLOWED_UPLOAD_ARGS).
-    * If using [Minio](https://www.minio.io/) or another S3 service you **must** set the `endpoint_url` to the desired url inside of your 'prefs'.
+    * If using [Minio](https://www.minio.io/) or another S3 service you **must** set the `endpoint_url` key to the desired url inside of your 'prefs'.
 1. Run the `prefSetter.py` script to apply settings:
     ```bash
     $ ./prefSetter.py
     ```
 1. Configure munkiimport:
 
-    _Note:_ you can set the Repo URL to anything you wish this plugin does not use that key. It will show up on `makecatalogs` runs so it is recommend to be S3 descriptive.
+    _Note:_ You can set the Repo URL to anything you wish as this plugin disregards that key. The Repo URL value will show up on `makecatalogs` runs so it is recommend to set the key to s3Repo.
 
     ```bash
     $ munkiimport --configure
 
-    Repo URL (example: afp://munki.example.com/repo): S3 Backend
+    Repo URL (example: afp://munki.example.com/repo): s3Repo
     pkginfo extension (Example: .plist): .plist
     pkginfo editor (examples: /usr/bin/vi or TextMate.app; leave empty to not open an editor after import): Atom.app
     Default catalog to use (example: testing): testing
