@@ -21,7 +21,7 @@ except(ImportError):
     print('This plugin uses the boto3 module. Please install it with:\n'
           '   pip install boto3 --user')
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 BUNDLE = 'com.clburlison.munki.s3Repo'
 
 
@@ -32,7 +32,7 @@ def get_preferences():
 
     Multiple profiles to be set in the 'com.clburlison.munki.s3Repo'
     preference domain. Swithing between the profiles can be done by changing
-    the AWS_PROFILE environment variable.
+    the S3REPO_PROFILE environment variable.
     """
     profile = os.environ.get('S3REPO_PROFILE') or 'default'
     if profile is not 'default':
