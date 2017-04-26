@@ -1,10 +1,10 @@
+# encoding: utf-8
 """
 Defines s3Repo plugin. See docstring for s3Repo class.
 
 Author: Clayton Burlison <https://clburlison.com>
 Source: https://github.com/clburlison/Munki-s3Repo-Plugin
 """
-# encoding: utf-8
 
 from Foundation import CFPreferencesCopyAppValue
 from PyObjCTools import Conversion
@@ -13,15 +13,17 @@ import tempfile
 import io
 import os
 import sys
+import threading
 
 try:
+    from boto3.s3.transfer import S3Transfer
     import boto3
     import botocore
 except(ImportError):
     print('This plugin uses the boto3 module. Please install it with:\n'
           '   pip install boto3 --user')
 
-__version__ = '0.2.1'
+__version__ = '0.3.0'
 BUNDLE = 'com.clburlison.munki.s3Repo'
 
 
@@ -54,6 +56,44 @@ def get_preferences():
 
     # Return a python dictonary of our preferences
     return Conversion.pythonCollectionFromPropertyList(pref)
+
+
+class ProgressPercentage(object):
+    """A handler for S3Transfer progress feedback.
+
+    Based off https://goo.gl/SGqSt6 & https://goo.gl/zXVGrQ
+    """
+
+    def __init__(self, filename):
+        """Constructor."""
+        self._filename = filename
+        self._size = float(os.path.getsize(filename))
+        self._seen_so_far = 0
+        self.prefix = 'Progress:'
+        self.bar_length = 50
+        self.str_format = "{0:.1f}"  # We only need one decimal place IE 57.4%
+        self._lock = threading.Lock()
+
+    def __call__(self, bytes_amount):
+        """Write feedback to stdout as the file is transfered."""
+        # To simplify we'll assume this is hooked up to a single filename.
+        with self._lock:
+            self._seen_so_far += bytes_amount
+            # Amount comlete as a string percentage
+            percents = self.str_format.format(
+                100 * (self._seen_so_far / self._size))
+            filled_length = int(round(
+                self.bar_length * self._seen_so_far / float(self._size)))
+            bar = '█' * filled_length + '-' * (self.bar_length - filled_length)
+
+            # Write out the progress bar
+            sys.stdout.write('\r%s |%s| %s%s' % (self.prefix, bar,
+                                                 percents, '%'))
+
+            # When at complete return the cursor to the start of a new line
+            if self._seen_so_far == self._size:
+                sys.stdout.write('\n')
+            sys.stdout.flush()
 
 
 class BotoError(Exception):
@@ -91,6 +131,7 @@ class s3Repo(Repo):
             service_name='s3', endpoint_url=endpoint_url)
         self.client = session.client(
             service_name='s3', endpoint_url=endpoint_url)
+        self.transfer = S3Transfer(self.client)
         self._connect()
 
     def _connect(self):
@@ -158,9 +199,9 @@ class s3Repo(Repo):
         """
         fileobj, directivepath = tempfile.mkstemp()
         try:
-            self.client.download_file(Bucket=self.BUCKET_NAME,
-                                      Key=resource_identifier,
-                                      Filename=directivepath)
+            self.transfer.download_file(bucket=self.BUCKET_NAME,
+                                        key=resource_identifier,
+                                        filename=directivepath)
             return open(directivepath).read()
         except(botocore.exceptions.ClientError) as err:
             print("DEBUG: The file '{}' does not exist. {}".format(
@@ -178,9 +219,11 @@ class s3Repo(Repo):
         local_file_path.
         """
         try:
-            self.client.download_file(Bucket=self.BUCKET_NAME,
-                                      Key=resource_identifier,
-                                      Filename=local_file_path)
+            # TODO: Make ProgressPercentage() work with files when they are
+            # downloaded via S3Transfer
+            self.transfer.download_file(bucket=self.BUCKET_NAME,
+                                        key=resource_identifier,
+                                        filename=local_file_path)
         except(Exception) as err:
             raise BotoError("An error occurred in 'get_to_local_file' while "
                             "attempting to download a file.", err)
@@ -211,10 +254,12 @@ class s3Repo(Repo):
         being saved to <repo_root>/pkgsinfo/apps/Firefox-52.0.plist.
         """
         try:
-            self.client.upload_file(Filename=local_file_path,
-                                    Bucket=self.BUCKET_NAME,
-                                    Key=resource_identifier,
-                                    ExtraArgs=self.EXTRA_ARGS)
+            self.transfer.upload_file(filename=local_file_path,
+                                      bucket=self.BUCKET_NAME,
+                                      key=resource_identifier,
+                                      extra_args=self.EXTRA_ARGS,
+                                      callback=ProgressPercentage(
+                                        local_file_path))
         except(Exception) as err:
             raise BotoError("An error occurred in 'put_from_local_file' while "
                             "attempting to upload a file.", err)
