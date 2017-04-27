@@ -22,8 +22,9 @@ try:
 except(ImportError):
     print('This plugin uses the boto3 module. Please install it with:\n'
           '   pip install boto3 --user')
+    exit(1)
 
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 BUNDLE = 'com.clburlison.munki.s3Repo'
 
 
