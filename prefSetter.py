@@ -36,6 +36,10 @@ prefs = {
                         'Cache-Control': '86400',
                     },
                 },
+                'default_class': 'REDUCED_REDUNDANCY',
+                'default_age': 86400,
+                'catalogs_age': 120,
+                'manifests_age': 120,
             }
          }
 
