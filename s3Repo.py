@@ -6,8 +6,14 @@ Author: Clayton Burlison <https://clburlison.com>
 Source: https://github.com/clburlison/Munki-s3Repo-Plugin
 """
 
-from Foundation import CFPreferencesCopyAppValue
-from PyObjCTools import Conversion
+# Cheat to define mac/non-mac runs
+try:
+    from Foundation import CFPreferencesCopyAppValue
+    from PyObjCTools import Conversion
+    platform = 'macos'
+except(ImportError):
+    platform = 'non-mac'
+
 from munkilib.munkirepo import Repo
 import tempfile
 import io
@@ -24,11 +30,11 @@ except(ImportError):
           '   pip install boto3 --user')
     exit(1)
 
-__version__ = '0.3.1'
+__version__ = '0.4.0'
 BUNDLE = 'com.clburlison.munki.s3Repo'
 
 
-def get_preferences():
+def get_preferences(platform):
     """Return a dictonary of the preferences from the current profile key.
 
     If no profile is set the plugin will use the 'default' profile key.
@@ -37,6 +43,25 @@ def get_preferences():
     preference domain. Swithing between the profiles can be done by changing
     the S3REPO_PROFILE environment variable.
     """
+    # If this is running on a non-mac platform cheat and use environment vars
+    if platform == 'non-mac':
+        prefs = {
+            'bucket': os.environ.get('bucket_name'),
+            'region': os.environ.get('AWS_REGION'),
+            'ExtraArgs': {
+                'ACL': 'public-read',
+                'StorageClass': 'REDUCED_REDUNDANCY',
+                'Metadata': {
+                    'Cache-Control': '86400',
+                },
+            },
+            'default_class': 'REDUCED_REDUNDANCY',
+            'default_age': 86400,
+            'catalogs_age': 120,
+            'manifests_age': 120,
+         }
+        return prefs
+
     profile = os.environ.get('S3REPO_PROFILE') or 'default'
     if profile is not 'default':
         print("DEBUG: Currently using the '{}' profile".format(profile))
@@ -117,15 +142,18 @@ class s3Repo(Repo):
 
     def __init__(self, baseurl):
         """Constructor."""
-        prefs = get_preferences()
+        prefs = get_preferences(platform)
         endpoint_url = prefs.get('endpoint_url')
         self.BUCKET_NAME = prefs.get('bucket')
         self.EXTRA_ARGS = prefs.get('ExtraArgs')
-        session = boto3.session.Session(
-                aws_access_key_id=prefs.get('aws_access_key_id'),
-                aws_secret_access_key=prefs.get('aws_secret_access_key'),
-                region_name=prefs.get('region'),
-                )
+        if prefs.get('aws_access_key_id'):
+            session = boto3.session.Session(
+                    aws_access_key_id=prefs.get('aws_access_key_id'),
+                    aws_secret_access_key=prefs.get('aws_secret_access_key'),
+                    region_name=prefs.get('region'),
+                    )
+        else:
+            session = boto3.session.Session(region_name=prefs.get('region'))
         # If using minio or another S3 compatible solution the endpoint_url
         # key needs to be set however we can pass None if the pref isn't set.
         self.s3 = session.resource(
@@ -229,6 +257,26 @@ class s3Repo(Repo):
             raise BotoError("An error occurred in 'get_to_local_file' while "
                             "attempting to download a file.", err)
 
+    def _extra_control(self, resource_identifier, extra_args):
+        """Return ExtraArgs with correct cache age.
+
+        This allows granular control over the storage class and cache of each
+        file type.
+
+        For a file-backed repo, a resource_identifier of
+        'pkgsinfo/apps/Firefox-52.0.plist' would result in the resource of
+        pkgsinfo which will then map to the 'pkgsinfo_age' pref key.
+        """
+        prefs = get_preferences(platform)
+        directory = resource_identifier.split('/')[0]
+        cache_age = (prefs.get(directory + '_age')
+                     or prefs.get('default_age'))
+        storage_class = (prefs.get(directory + '_storage')
+                         or prefs.get('default_class'))
+        extra_args['Metadata']['Cache-Control'] = str(cache_age)
+        extra_args['StorageClass'] = str(storage_class)
+        return extra_args
+
     def put(self, resource_identifier, content):
         """Upload python data to the remote S3 bucket.
 
@@ -238,11 +286,12 @@ class s3Repo(Repo):
         """
         # boto3.client.upload_fileobj() needs data to be a binary object
         data = io.BytesIO(content)
+        extra = self._extra_control(resource_identifier, self.EXTRA_ARGS)
         try:
             self.client.upload_fileobj(Fileobj=data,
                                        Bucket=self.BUCKET_NAME,
                                        Key=resource_identifier,
-                                       ExtraArgs=self.EXTRA_ARGS)
+                                       ExtraArgs=extra)
         except(Exception) as err:
             raise BotoError("An error occurred in 'put' while attempting "
                             "to upload a file.", err)
@@ -254,11 +303,12 @@ class s3Repo(Repo):
         of 'pkgsinfo/apps/Firefox-52.0.plist' would result in the content
         being saved to <repo_root>/pkgsinfo/apps/Firefox-52.0.plist.
         """
+        extra = self._extra_control(resource_identifier, self.EXTRA_ARGS)
         try:
             self.transfer.upload_file(filename=local_file_path,
                                       bucket=self.BUCKET_NAME,
                                       key=resource_identifier,
-                                      extra_args=self.EXTRA_ARGS,
+                                      extra_args=extra,
                                       callback=ProgressPercentage(
                                         local_file_path))
         except(Exception) as err:
