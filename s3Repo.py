@@ -30,9 +30,7 @@ except(ImportError):
           '   pip install boto3 --user')
     exit(1)
 
-print("Platform is '{}'".format(platform))
-
-__version__ = '0.4.1'
+__version__ = '0.4.2'
 BUNDLE = 'com.clburlison.munki.s3Repo'
 
 
@@ -150,6 +148,7 @@ class s3Repo(Repo):
 
     def __init__(self, baseurl):
         """Constructor."""
+        print("s3Repo Plugin platform is '{}'".format(platform))
         prefs = get_preferences(platform)
         endpoint_url = prefs.get('endpoint_url')
         self.BUCKET_NAME = prefs.get('bucket')
