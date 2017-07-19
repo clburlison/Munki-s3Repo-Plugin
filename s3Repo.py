@@ -30,7 +30,9 @@ except(ImportError):
           '   pip install boto3 --user')
     exit(1)
 
-__version__ = '0.4.0'
+print("Platform is '{}'".format(platform))
+
+__version__ = '0.4.1'
 BUNDLE = 'com.clburlison.munki.s3Repo'
 
 
@@ -45,6 +47,12 @@ def get_preferences(platform):
     """
     # If this is running on a non-mac platform cheat and use environment vars
     if platform == 'non-mac':
+        if os.environ.get('bucket_name') is None:
+            print("Environment variable 'bucket_name' is not set!")
+            sys.exit(1)
+        if os.environ.get('AWS_REGION') is None:
+            print("Environment variable 'AWS_REGION' is not set!")
+            sys.exit(1)
         prefs = {
             'bucket': os.environ.get('bucket_name'),
             'region': os.environ.get('AWS_REGION'),
@@ -56,9 +64,9 @@ def get_preferences(platform):
                 },
             },
             'default_class': 'REDUCED_REDUNDANCY',
-            'default_age': 86400,
-            'catalogs_age': 120,
-            'manifests_age': 120,
+            'default_age': '86400',
+            'catalogs_age': '120',
+            'manifests_age': '120',
          }
         return prefs
 
