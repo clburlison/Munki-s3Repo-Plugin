@@ -30,7 +30,7 @@ except(ImportError):
           '   pip install boto3 --user')
     exit(1)
 
-__version__ = '0.4.2'
+__version__ = '0.4.3'
 BUNDLE = 'com.clburlison.munki.s3Repo'
 
 
@@ -54,17 +54,6 @@ def get_preferences(platform):
         prefs = {
             'bucket': os.environ.get('bucket_name'),
             'region': os.environ.get('AWS_REGION'),
-            'ExtraArgs': {
-                'ACL': 'public-read',
-                'StorageClass': 'REDUCED_REDUNDANCY',
-                'Metadata': {
-                    'Cache-Control': '86400',
-                },
-            },
-            'default_class': 'REDUCED_REDUNDANCY',
-            'default_age': '86400',
-            'catalogs_age': '120',
-            'manifests_age': '120',
          }
         return prefs
 
