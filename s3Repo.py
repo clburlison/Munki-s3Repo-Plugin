@@ -30,7 +30,7 @@ except(ImportError):
           '   pip install boto3 --user')
     exit(1)
 
-__version__ = '0.4.3'
+__version__ = '0.4.4'
 BUNDLE = 'com.clburlison.munki.s3Repo'
 
 
@@ -263,6 +263,8 @@ class s3Repo(Repo):
         'pkgsinfo/apps/Firefox-52.0.plist' would result in the resource of
         pkgsinfo which will then map to the 'pkgsinfo_age' pref key.
         """
+        if extra_args is None:
+            return {}
         prefs = get_preferences(platform)
         directory = resource_identifier.split('/')[0]
         cache_age = (prefs.get(directory + '_age')
