@@ -30,7 +30,7 @@ except(ImportError):
           '   pip install boto3 --user')
     exit(1)
 
-__version__ = '0.4.4'
+__version__ = '0.4.5'
 BUNDLE = 'com.clburlison.munki.s3Repo'
 
 
