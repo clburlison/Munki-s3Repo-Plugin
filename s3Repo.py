@@ -30,7 +30,7 @@ except(ImportError):
           '   pip install boto3 --user')
     exit(1)
 
-__version__ = '0.4.4'
+__version__ = '0.4.5'
 BUNDLE = 'com.clburlison.munki.s3Repo'
 
 
@@ -58,7 +58,7 @@ def get_preferences(platform):
         return prefs
 
     profile = os.environ.get('S3REPO_PROFILE') or 'default'
-    if profile is not 'default':
+    if profile != 'default':
         print("DEBUG: Currently using the '{}' profile".format(profile))
     pref = CFPreferencesCopyAppValue(profile, BUNDLE)
     if pref is None:
@@ -227,7 +227,7 @@ class s3Repo(Repo):
             self.transfer.download_file(bucket=self.BUCKET_NAME,
                                         key=resource_identifier,
                                         filename=directivepath)
-            return open(directivepath).read()
+            return open(directivepath, 'rb').read()
         except(botocore.exceptions.ClientError) as err:
             print("DEBUG: The file '{}' does not exist. {}".format(
                   resource_identifier, err))
