@@ -1,3 +1,6 @@
+> [!WARNING]
+> This repo is unmaintained.
+
 ## Introduction
 
 s3Repo is a [Repo Plugin](https://github.com/munki/munki/wiki/Repo-Plugins) for [Munki 3](https://github.com/munki/munki/wiki/Munki-3-Information). This plugin allows administrators to interact with their munki repo hosted in a S3 compatible bucket.
